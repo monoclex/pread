@@ -19,7 +19,7 @@ namespace pread
 		/// </summary>
 		[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		public static extern unsafe bool ReadFile(IntPtr hFile, byte* lpBuffer, UInt32 nNumberOfBytesToRead, out UInt32 lpNumberOfBytesRead, IntPtr lpOverlapped);
+		public static extern unsafe bool ReadFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
 #pragma warning restore CA1401 // P/Invokes should not be visible
 
 		/// <summary>
@@ -44,7 +44,7 @@ namespace pread
 			public uint BytesRead;
 		}
 
-		public static unsafe PreadResult Pread(FileStream fileHandle, Span<byte> buffer, ulong fileOffset, uint readAmount)
+		public static unsafe PreadResult Pread(Span<byte> buffer, FileStream fileHandle, ulong fileOffset)
 		{
 			// https://github.com/aleitner/windows_pread/blob/master/src/pread.c#L86
 			var handle = fileHandle.SafeFileHandle.DangerousGetHandle();
@@ -70,7 +70,7 @@ namespace pread
 
 				fixed (byte* bufferPtr = buffer)
 				{
-					if (!ReadFile(handle, bufferPtr, readAmount, out var bytesRead, (IntPtr)overlapped))
+					if (!ReadFile(handle, bufferPtr, (uint)buffer.Length, out var bytesRead, (IntPtr)overlapped))
 					{
 						int errorCode = Marshal.GetLastWin32Error();
 

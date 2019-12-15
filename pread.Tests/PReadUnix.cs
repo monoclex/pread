@@ -40,7 +40,7 @@ namespace pread.Tests
 
 			// check if pread works
 			Span<byte> readBuffer = stackalloc byte[128];
-			var result = pread.Unix.Pread(fileStream, readBuffer, 512, 128);
+			var result = pread.Unix.Pread(readBuffer, fileStream, 512);
 
 			Assert.True(result.DidSucceed);
 			Assert.Equal(128, result.Data.BytesRead);

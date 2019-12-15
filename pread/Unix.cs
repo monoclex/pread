@@ -35,13 +35,13 @@ namespace pread
 			public long BytesRead;
 		}
 
-		public static unsafe PreadResult Pread(FileStream fileHandle, Span<byte> buffer, ulong fileOffset, uint readAmount)
+		public static unsafe PreadResult Pread(Span<byte> buffer, FileStream fileHandle, ulong fileOffset)
 		{
 			var fileDescriptor = fileHandle.SafeFileHandle.DangerousGetHandle();
 
 			fixed (void* bufferPtr = buffer)
 			{
-				var bytesRead = (long)pread(fileDescriptor, bufferPtr, (UIntPtr)readAmount, (IntPtr)fileOffset);
+				var bytesRead = (long)pread(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
 
 				if (bytesRead < 0)
 				{
