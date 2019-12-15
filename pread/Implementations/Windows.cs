@@ -3,13 +3,16 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace pread
+namespace pread.Implementations
 {
 	/// <summary>
 	/// API specific implementations for 'pread' on Windows
 	/// </summary>
 	public static class Windows
 	{
+		// i dislike it but oh well :/
+		public static string StringError(int errorCode) => new System.ComponentModel.Win32Exception(errorCode).Message;
+
 #pragma warning disable CA1401 // P/Invokes should not be visible - allow consumers to consume this if they choose to do so
 
 		// extern call signature: https://stackoverflow.com/a/28781279
@@ -28,6 +31,7 @@ namespace pread
 		[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern unsafe bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+
 #pragma warning restore CA1401 // P/Invokes should not be visible
 
 		/// <summary>

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 
-namespace pread
+namespace pread.Implementations
 {
 	/// <summary>
 	/// API specific implementations for 'pread' on Unix
@@ -13,6 +11,27 @@ namespace pread
 	{
 		// figured out thanks to help of members of the c# discord server in lowlevel-advanced,
 		// https://discord.gg/csharp
+
+		// to get the string of an error, we call strerr (simple) and then free the char* afterwords
+		[DllImport("c")]
+		public static extern unsafe IntPtr strerr(IntPtr errnum);
+
+		[DllImport("c")]
+		public static extern unsafe void free(IntPtr ptr);
+
+		public static string StringError(int errorCode)
+		{
+			var result = strerr((IntPtr)errorCode);
+
+			try
+			{
+				return Marshal.PtrToStringAnsi(result);
+			}
+			finally
+			{
+				free(result);
+			}
+		}
 
 		// TODO: C# 9, nuint instead of UIntPtr
 		[DllImport("c", SetLastError = true)]
@@ -73,7 +92,7 @@ namespace pread
 			}
 		}
 
-		public static unsafe PResult Pwrite(Span<byte> buffer, FileStream fileStream, ulong fileOffset)
+		public static unsafe PResult Pwrite(ReadOnlySpan<byte> buffer, FileStream fileStream, ulong fileOffset)
 		{
 			var fileDescriptor = fileStream.SafeFileHandle.DangerousGetHandle();
 
