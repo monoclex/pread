@@ -5,11 +5,17 @@ using System.IO;
 
 namespace pread.Benchmarks
 {
-	/* (SSD)
+	/* (SSD): windows
 |            Method |     Mean |     Error |    StdDev |
 |------------------ |---------:|----------:|----------:|
 | StreamReadAndSeek | 2.253 us | 0.0291 us | 0.0272 us |
 |             Pread | 1.984 us | 0.0264 us | 0.0234 us |
+
+		(CLOUD): unix
+|            Method |       Mean |    Error |   StdDev |
+|------------------ |-----------:|---------:|---------:|
+|             Pread |   896.1 ns | 16.20 ns | 15.15 ns |
+| StreamReadAndSeek | 1,974.0 ns | 49.80 ns | 46.58 ns |
 	 */
 
 	public class StreamVsPread
