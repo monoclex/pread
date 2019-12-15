@@ -18,8 +18,11 @@ namespace pread
 		[DllImport("c", SetLastError = true)]
 		public static extern unsafe IntPtr pread(IntPtr fd, void* buf, UIntPtr count, IntPtr offset);
 
+		[DllImport("c", SetLastError = true)]
+		public static extern unsafe IntPtr pwrite(IntPtr fd, void* buf, UIntPtr count, IntPtr offset);
+
 		[StructLayout(LayoutKind.Auto)]
-		public struct PreadResult
+		public struct PResult
 		{
 			public bool DidSucceed;
 			public PreadResultData Data;
@@ -32,12 +35,12 @@ namespace pread
 			public int Errno;
 
 			[FieldOffset(0)]
-			public long BytesRead;
+			public long Bytes;
 		}
 
-		public static unsafe PreadResult Pread(Span<byte> buffer, FileStream fileHandle, ulong fileOffset)
+		public static unsafe PResult Pread(Span<byte> buffer, FileStream fileStream, ulong fileOffset)
 		{
-			var fileDescriptor = fileHandle.SafeFileHandle.DangerousGetHandle();
+			var fileDescriptor = fileStream.SafeFileHandle.DangerousGetHandle();
 
 			fixed (void* bufferPtr = buffer)
 			{
@@ -47,7 +50,7 @@ namespace pread
 				{
 					var errno = Marshal.GetLastWin32Error();
 
-					return new PreadResult
+					return new PResult
 					{
 						DidSucceed = false,
 						Data = new PreadResultData
@@ -58,12 +61,47 @@ namespace pread
 				}
 				else
 				{
-					return new PreadResult
+					return new PResult
 					{
 						DidSucceed = true,
 						Data = new PreadResultData
 						{
-							BytesRead = bytesRead
+							Bytes = bytesRead
+						}
+					};
+				}
+			}
+		}
+
+		public static unsafe PResult Pwrite(Span<byte> buffer, FileStream fileStream, ulong fileOffset)
+		{
+			var fileDescriptor = fileStream.SafeFileHandle.DangerousGetHandle();
+
+			fixed (void* bufferPtr = buffer)
+			{
+				var bytesRead = (long)pwrite(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
+
+				if (bytesRead < 0)
+				{
+					var errno = Marshal.GetLastWin32Error();
+
+					return new PResult
+					{
+						DidSucceed = false,
+						Data = new PreadResultData
+						{
+							Errno = errno
+						}
+					};
+				}
+				else
+				{
+					return new PResult
+					{
+						DidSucceed = true,
+						Data = new PreadResultData
+						{
+							Bytes = bytesRead
 						}
 					};
 				}

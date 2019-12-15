@@ -43,7 +43,7 @@ namespace pread.Tests
 			var result = pread.Unix.Pread(readBuffer, fileStream, 512);
 
 			Assert.True(result.DidSucceed);
-			Assert.Equal(128, result.Data.BytesRead);
+			Assert.Equal(128, result.Data.Bytes);
 
 			Assert.Equal((byte)'A', readBuffer[0]);
 			Assert.Equal((byte)'A', readBuffer[^1]);
