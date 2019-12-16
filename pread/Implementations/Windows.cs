@@ -69,9 +69,9 @@ namespace pread.Implementations
 			try
 			{
 				// explicitly memset 0 stuff
-				overlapped->EventHandle = (IntPtr)0;
-				overlapped->InternalHigh = (IntPtr)0;
-				overlapped->InternalLow = (IntPtr)0;
+				overlapped->EventHandle = IntPtr.Zero;
+				overlapped->InternalHigh = IntPtr.Zero;
+				overlapped->InternalLow = IntPtr.Zero;
 
 				// set the high bits of ulong
 				overlapped->OffsetHigh = (int)((fileOffset & 0b11111111_11111111_11111111_11111111_0000000_0000000_0000000_0000000) >> 32);
@@ -127,9 +127,9 @@ namespace pread.Implementations
 			try
 			{
 				// explicitly memset 0 stuff
-				overlapped->EventHandle = (IntPtr)0;
-				overlapped->InternalHigh = (IntPtr)0;
-				overlapped->InternalLow = (IntPtr)0;
+				overlapped->EventHandle = IntPtr.Zero;
+				overlapped->InternalHigh = IntPtr.Zero;
+				overlapped->InternalLow = IntPtr.Zero;
 
 				// set the high bits of ulong
 				overlapped->OffsetHigh = (int)((fileOffset & 0b11111111_11111111_11111111_11111111_0000000_0000000_0000000_0000000) >> 32);

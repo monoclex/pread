@@ -49,7 +49,7 @@ namespace pread.Benchmarks
 		[Benchmark]
 		public void Pread()
 		{
-			pread.Windows.Pread(new Span<byte>(_buffer), _fileStream, Offset);
+			P.Read(_fileStream, new Span<byte>(_buffer), Offset);
 		}
 	}
 

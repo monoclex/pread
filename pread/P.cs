@@ -31,7 +31,7 @@ namespace pread
 		/// <exception cref="NotSupportedException">If the platform the code is running on does not support this operation.
 		/// Check if this platform is supported with <see cref="P.IsSupported"/> to avoid this.</exception>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static uint Read(this FileStream fileStream, Span<byte> buffer, ulong fileOffset)
+		public static uint Read(FileStream fileStream, Span<byte> buffer, ulong fileOffset)
 		{
 			if (_windows)
 			{
@@ -46,7 +46,7 @@ namespace pread
 				ThrowHelper();
 				return 0;
 
-				static void ThrowHelper() => throw new NotSupportedException("Cannot `pread` on this platform.");
+				static void ThrowHelper() => throw new NotSupportedException("Cannot use atomic seek and read/write operations on this platform.");
 			}
 		}
 
@@ -62,7 +62,7 @@ namespace pread
 		/// <exception cref="NotSupportedException">If the platform the code is running on does not support this operation.
 		/// Check if this platform is supported with <see cref="P.IsSupported"/> to avoid this.</exception>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static uint Write(this FileStream fileStream, ReadOnlySpan<byte> data, ulong fileOffset)
+		public static uint Write(FileStream fileStream, ReadOnlySpan<byte> data, ulong fileOffset)
 		{
 			if (_windows)
 			{
@@ -77,7 +77,7 @@ namespace pread
 				ThrowHelper();
 				return 0;
 
-				static void ThrowHelper() => throw new NotSupportedException("Cannot `pread` on this platform.");
+				static void ThrowHelper() => throw new NotSupportedException("Cannot use atomic seek and read/write operations on this platform.");
 			}
 		}
 
