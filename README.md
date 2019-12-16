@@ -48,9 +48,17 @@ Unlike a FileStream, calling `Length` and `Position` has no performance cost, an
 ```cs
 var section = new FileStreamSection(fileStream);
 var stream = new FileStreamSectionStream(section);
+var stream2 = new FileStreamSectionStream(section.Slice(128, 128));
 
-var buffer = new byte[128];
+var buffer = new byte[64];
+
+// using `stream` and `stream2` don't affect eachother. they both maintain
+// their own position of where the are in a file and make calls to P.Read/Write
+// allowing you to have concurrent readers on the same FileStream.
+
 int readBytes = stream.Read(buffer);
+stream2.Read(buffer);
+stream2.Read(buffer);
 readBytes = stream.Read(buffer);
 
 stream.Write(buffer);
