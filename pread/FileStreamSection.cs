@@ -11,7 +11,7 @@ namespace pread
 	/// </summary>
 	public struct FileStreamSection
 	{
-		private readonly FileStream _parent;
+		internal readonly FileStream _parent;
 		private readonly ulong _start;
 		private readonly ulong _length;
 
