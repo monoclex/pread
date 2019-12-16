@@ -19,6 +19,23 @@ Streams in C# do not support atomic seek and read operations, meaning you can't 
 
 Enter `pread`. `pread` exposes a simple api, `P.Read(FileStream, Span<byte>, ulong)` and `P.Read(FileStream, ReadOnlySpan<byte>, ulong)` which wrap around the native unix methods [pread and pwrite](http://man7.org/linux/man-pages/man2/pwrite.2.html) on linux and wraps around [ReadFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile) and [WriteFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile) on windows.
 
+# Performance
+
+Comparison between using `P.Read` versus `Stream.Seek`ing to a position, calling `Stream.Read`, then `Stream.Seek`ing back to the origin.
+
+It should be noted that even if the seek call back to the origin is elided, it only saves about 0.2ns
+
+|            Method |     Mean |     Error |    StdDev |
+|------------------ |---------:|----------:|----------:|
+|             Pread | 1.984 us | 0.0264 us | 0.0234 us |
+| StreamReadAndSeek | 2.253 us | 0.0291 us | 0.0272 us |
+
+		(CLOUD): unix
+|            Method |       Mean |    Error |   StdDev |
+|------------------ |-----------:|---------:|---------:|
+|             Pread |   896.1 ns | 16.20 ns | 15.15 ns |
+| StreamReadAndSeek | 1,974.0 ns | 49.80 ns | 46.58 ns |
+
 # Usage
 
 The main API for this library is `P.Read` and `P.Write`. However, there are various abstractions built on top of these methods that are recommended to be used instead due to the increase safety they provide.
