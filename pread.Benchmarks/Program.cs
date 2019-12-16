@@ -1,5 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
+
 using System;
 using System.IO;
 
@@ -53,9 +54,9 @@ namespace pread.Benchmarks
 		}
 	}
 
-	class Program
+	internal class Program
 	{
-		static void Main(string[] args)
+		private static void Main(string[] args)
 		{
 			BenchmarkRunner.Run<StreamVsPread>();
 		}

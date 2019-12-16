@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
+
 using Xunit;
 
 namespace pread.Tests
@@ -25,6 +24,7 @@ namespace pread.Tests
 		}
 
 #pragma warning disable CA1063 // Implement IDisposable Correctly
+
 		public void Dispose()
 #pragma warning restore CA1063 // Implement IDisposable Correctly
 		{
@@ -68,7 +68,7 @@ namespace pread.Tests
 			var bytesRead = P.Read(_fileStream, readBuffer, Offset);
 
 			// do not test where the filestream's position is, as per the warning in P.Read
-			
+
 			Assert.Equal((uint)DataLength, bytesRead);
 
 			AssertSpansEqual(data.Slice(Offset, DataLength), readBuffer);
