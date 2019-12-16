@@ -30,7 +30,6 @@ It should be noted that even if the seek call back to the origin is elided, it o
 |             Pread | 1.984 us | 0.0264 us | 0.0234 us |
 | StreamReadAndSeek | 2.253 us | 0.0291 us | 0.0272 us |
 
-		(CLOUD): unix
 |            Method |       Mean |    Error |   StdDev |
 |------------------ |-----------:|---------:|---------:|
 |             Pread |   896.1 ns | 16.20 ns | 15.15 ns |
