@@ -14,14 +14,14 @@ namespace pread.Implementations
 
 		// to get the string of an error, we call strerr (simple) and then free the char* afterwords
 		[DllImport("c")]
-		public static extern unsafe IntPtr strerr(IntPtr errnum);
+		public static extern unsafe IntPtr strerror(IntPtr errnum);
 
-		[DllImport("c")]
-		public static extern unsafe void free(IntPtr ptr);
+		// [DllImport("c")]
+		// public static extern unsafe void free(IntPtr ptr);
 
 		public static string StringError(int errorCode)
 		{
-			var result = strerr((IntPtr)errorCode);
+			var result = strerror((IntPtr)errorCode);
 
 			try
 			{
@@ -29,7 +29,8 @@ namespace pread.Implementations
 			}
 			finally
 			{
-				free(result);
+				// calling 'free' causes the runtime to crash
+				// free(result);
 			}
 		}
 

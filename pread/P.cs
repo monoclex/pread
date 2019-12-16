@@ -20,8 +20,10 @@ namespace pread
 		public static bool IsSupported { get; } = _windows || _linux;
 
 		/// <summary>
-		/// Performs an atomic seek and read operation to read data from within a file without changing
-		/// where the <see cref="FileStream"/>'s <see cref="FileStream.Position"/> is.
+		/// Performs an atomic seek and read operation to read data from within a file.
+		/// <remarks>
+		/// DO NOT RELY ON THE POSITION OF THE FILESTREAM AFTER THIS CALL TO BE UNIFORM ON BOTH PLATFORMS.
+		/// </remarks>
 		/// </summary>
 		/// <param name="fileStream">The <see cref="FileStream"/> to perform the operation with.</param>
 		/// <param name="buffer">The buffer to read data in from.</param>
@@ -53,6 +55,9 @@ namespace pread
 		/// <summary>
 		/// Performs an atomic seek and write operation to write data from within a file without changing
 		/// where the <see cref="FileStream"/>'s <see cref="FileStream.Position"/> is.
+		/// <remarks>
+		/// DO NOT RELY ON THE POSITION OF THE FILESTREAM AFTER THIS CALL TO BE UNIFORM ON BOTH PLATFORMS.
+		/// </remarks>
 		/// </summary>
 		/// <param name="fileStream">The <see cref="FileStream"/> to perform the operation with.</param>
 		/// <param name="data">The data to write.</param>

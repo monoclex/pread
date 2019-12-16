@@ -67,8 +67,8 @@ namespace pread.Tests
 			Span<byte> readBuffer = stackalloc byte[DataLength];
 			var bytesRead = P.Read(_fileStream, readBuffer, Offset);
 
-			// atomic seek and read, we're now after the data we read
-			Assert.Equal(512 + 128, _fileStream.Position);
+			// do not test where the filestream's position is, as per the warning in P.Read
+			
 			Assert.Equal((uint)DataLength, bytesRead);
 
 			AssertSpansEqual(data.Slice(Offset, DataLength), readBuffer);
@@ -86,6 +86,8 @@ namespace pread.Tests
 
 			// clear internal FileStream buffer so it will read data fine
 			var fileData = ReadFile();
+
+			// do not test where the filestream's position is, as per the warning in P.Write
 
 			Assert.Equal(bytesWritten, (uint)DataLength);
 			AssertSpansEqual(data, fileData);
