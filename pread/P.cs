@@ -38,11 +38,11 @@ namespace pread
 		{
 			if (_windows)
 			{
-				return ResultWindows(Windows.Pread(buffer, fileStream, fileOffset));
+				return ResultWindows(Windows.PRead(fileStream, buffer, fileOffset));
 			}
 			else if (_linux)
 			{
-				return ResultUnix(Unix.Pread(buffer, fileStream, fileOffset));
+				return ResultUnix(Unix.PRead(fileStream, buffer, fileOffset));
 			}
 			else
 			{
@@ -72,11 +72,11 @@ namespace pread
 		{
 			if (_windows)
 			{
-				return ResultWindows(Windows.Pwrite(data, fileStream, fileOffset));
+				return ResultWindows(Windows.PWrite(fileStream, data, fileOffset));
 			}
 			else if (_linux)
 			{
-				return ResultUnix(Unix.Pwrite(data, fileStream, fileOffset));
+				return ResultUnix(Unix.PWrite(fileStream, data, fileOffset));
 			}
 			else
 			{
@@ -92,11 +92,11 @@ namespace pread
 		{
 			if (!result.DidSucceed)
 			{
-				ThrowHelper(result.Data.WindowsErrorCode);
+				ThrowHelper(result.WindowsErrorCode);
 				static void ThrowHelper(int errorCode) => throw new IOException(Windows.StringError(errorCode));
 			}
 
-			return result.Data.Bytes;
+			return result.Bytes;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -104,12 +104,12 @@ namespace pread
 		{
 			if (!result.DidSucceed)
 			{
-				ThrowHelper(result.Data.Errno);
+				ThrowHelper(result.Errno);
 				static void ThrowHelper(int errorCode) => throw new IOException(Unix.StringError(errorCode));
 			}
 
 			// no way for dot net to write more than uint.MaxValue data so this is safe
-			return (uint)result.Data.Bytes;
+			return (uint)result.Bytes;
 		}
 	}
 }

@@ -10,15 +10,30 @@ namespace pread.Implementations
 	/// </summary>
 	public static class Windows
 	{
+		/// <summary>
+		/// Determines if the current machine is a windows machine. This is
+		/// implemented with <see cref="RuntimeInformation.IsOSPlatform(OSPlatform)"/>.
+		/// </summary>
 		public static bool MachineIsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-		// i dislike it but oh well :/
-		public static string StringError(int errorCode) => new System.ComponentModel.Win32Exception(errorCode).Message;
+		/// <summary>
+		/// This gets an error message associated with an error code, for the
+		/// <see cref="Windows"/> platform.
+		/// </summary>
+		/// <param name="errorCode">The error code.</param>
+		/// <returns>The error message of the given <paramref name="errorCode"/>.</returns>
+		public static string StringError(int errorCode)
 
+			// i dislike having to new up an exception to get the message, but it's eh
+			=> new System.ComponentModel.Win32Exception(errorCode).Message;
+
+		/// <summary>
+		/// Provides <c>DllImport</c>s to native functions used to emulate the
+		/// functionality of <c>pread</c> and <c>pwrite</c>.
+		/// </summary>
 		public static class Native
 		{
 #pragma warning disable CA1401 // P/Invokes should not be visible - allow consumers to consume this if they choose to do so
-
 			// extern call signature: https://stackoverflow.com/a/28781279
 			// it is said that LPVOID and LPCVOID should be IntPtrs but i like byte* better
 
@@ -35,33 +50,59 @@ namespace pread.Implementations
 			[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern unsafe bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
-
 #pragma warning restore CA1401 // P/Invokes should not be visible
 		}
 
 		/// <summary>
-		/// Small utility struct for returning if a given pread was successful.
-		/// Note: there is absolute no native interop at play here, besides the
-		/// WindowsErrorCode.
+		/// Represents the result of a pread/pwrite operation. Provides
+		/// information about a possible failure or error codes in a memory
+		/// efficient manner.
 		/// </summary>
-		[StructLayout(LayoutKind.Auto)]
+		[StructLayout(LayoutKind.Explicit)]
 		public struct PResult
 		{
-			public bool DidSucceed;
-			public PreadResultData Data;
-		}
-
-		[StructLayout(LayoutKind.Explicit)]
-		public struct PreadResultData
-		{
+			/// <summary>
+			/// The error code of the operation, if it had failed.
+			/// Ensure <see cref="DidSucceed"/> is <c>false</c> before accessing <see cref="WindowsErrorCode"/>.
+			/// If <see cref="DidSucceed"/> is <c>true</c>, accessing <see cref="WindowsErrorCode"/> is equivalent to performing
+			/// an unchecked cast on <see cref="Bytes"/> to int.
+			/// </summary>
 			[FieldOffset(0)]
 			public int WindowsErrorCode;
 
+			/// <summary>
+			/// The amount of bytes read from the operation, if it had succeeded.
+			/// Ensure <see cref="DidSucceed"/> is <c>true</c> before accessing <see cref="Bytes"/>.
+			/// If <see cref="DidSucceed"/> is <c>false</c>, accessing <see cref="Bytes"/> is equivalent to performing
+			/// an unchecked cast on <see cref="WindowsErrorCode"/> to uint.
+			/// </summary>
 			[FieldOffset(0)]
 			public uint Bytes;
+
+			/// <summary>
+			/// Tells whether the operation had succeeded (<c>true</c>) or failed (<c>false</c>).
+			/// If <see cref="DidSucceed"/> is <c>true</c>, access <see cref="Bytes"/>.
+			/// If <see cref="DidSucceed"/> is <c>false</c>, access <see cref="WindowsErrorCode"/>.
+			/// </summary>
+			[FieldOffset(sizeof(uint))]
+			public bool DidSucceed;
 		}
 
-		public static unsafe PResult Pread(Span<byte> buffer, FileStream fileStream, ulong fileOffset)
+		// API compatibility
+		[Obsolete("Use " + nameof(PRead) + ".")]
+		public static PResult Pread(Span<byte> buffer, FileStream fileStream, ulong fileOffset)
+			=> PRead(fileStream, buffer, fileOffset);
+
+		/// <summary>
+		/// Performs the windows equivalent of a <c>pread</c> on a filestream at an offset to a buffer.
+		/// </summary>
+		/// <param name="fileStream">The file to read from.</param>
+		/// <param name="buffer">The buffer to write data to.</param>
+		/// <param name="fileOffset">The offset in the file to read data from.</param>
+		/// <returns>A <see cref="PResult"/>.</returns>
+		// Pread -> PRead: inline with P.Read better, aligns with C# naming conventions better
+		// Span<byte>, FileStream, ulong -> FileStream, Span<byte>, ulong: aligns with P.Read better.
+		public static unsafe PResult PRead(FileStream fileStream, Span<byte> buffer, ulong fileOffset)
 		{
 			// https://github.com/aleitner/windows_pread/blob/master/src/pread.c#L86
 			var handle = fileStream.SafeFileHandle.DangerousGetHandle();
@@ -94,10 +135,7 @@ namespace pread.Implementations
 						return new PResult
 						{
 							DidSucceed = false,
-							Data = new PreadResultData
-							{
-								WindowsErrorCode = errorCode
-							}
+							WindowsErrorCode = errorCode,
 						};
 					}
 					else
@@ -105,10 +143,7 @@ namespace pread.Implementations
 						return new PResult
 						{
 							DidSucceed = true,
-							Data = new PreadResultData
-							{
-								Bytes = bytesRead
-							}
+							Bytes = bytesRead,
 						};
 					}
 				}
@@ -119,7 +154,20 @@ namespace pread.Implementations
 			}
 		}
 
-		public static unsafe PResult Pwrite(ReadOnlySpan<byte> data, FileStream fileStream, ulong fileOffset)
+		[Obsolete("Use " + nameof(PWrite) + ".")]
+		public static PResult Pwrite(ReadOnlySpan<byte> data, FileStream fileStream, ulong fileOffset)
+			=> PWrite(fileStream, data, fileOffset);
+
+		/// <summary>
+		/// Performs the windows equivalent of a <c>pwrite</c> on a filestream at an offset to a buffer.
+		/// </summary>
+		/// <param name="fileStream">The file to write to.</param>
+		/// <param name="data">The data to write to the file.</param>
+		/// <param name="fileOffset">The offset in the file to write data at.</param>
+		/// <returns>A <see cref="PResult"/>.</returns>
+		// Pwrite -> PWrite: inline with P.Write better, aligns with C# naming conventions better
+		// ReadOnlySpan<byte>, FileStream, ulong -> FileStream, ReadOnlySpan<byte>, ulong: aligns with P.Write better.
+		public static unsafe PResult PWrite(FileStream fileStream, ReadOnlySpan<byte> data, ulong fileOffset)
 		{
 			// https://github.com/aleitner/windows_pread/blob/master/src/pread.c#L86
 			var handle = fileStream.SafeFileHandle.DangerousGetHandle();
@@ -152,10 +200,7 @@ namespace pread.Implementations
 						return new PResult
 						{
 							DidSucceed = false,
-							Data = new PreadResultData
-							{
-								WindowsErrorCode = errorCode
-							}
+							WindowsErrorCode = errorCode,
 						};
 					}
 					else
@@ -163,10 +208,7 @@ namespace pread.Implementations
 						return new PResult
 						{
 							DidSucceed = true,
-							Data = new PreadResultData
-							{
-								Bytes = bytesWritten
-							}
+							Bytes = bytesWritten,
 						};
 					}
 				}
