@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -42,14 +43,14 @@ namespace pread.Implementations
 			/// </summary>
 			[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
 			[return: MarshalAs(UnmanagedType.Bool)]
-			public static extern unsafe bool ReadFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
+			public static extern unsafe bool ReadFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, NativeOverlapped* lpOverlapped);
 
 			/// <summary>
 			/// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
 			/// </summary>
 			[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
 			[return: MarshalAs(UnmanagedType.Bool)]
-			public static extern unsafe bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+			public static extern unsafe bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
 #pragma warning restore CA1401 // P/Invokes should not be visible
 		}
 
@@ -109,48 +110,15 @@ namespace pread.Implementations
 
 			// https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-overlapped
 			// we can use System.Threading.NativeOverlapped
-			NativeOverlapped* overlapped = (NativeOverlapped*)Marshal.AllocHGlobal(sizeof(NativeOverlapped));
+			using var overlapped = MarshalAlloc<NativeOverlapped>.New();
 
 			// we're allocating memory, want to make sure we free it when we're done
-			try
+			SetOverlapped(overlapped, fileOffset);
+
+			fixed (byte* bufferPtr = buffer)
 			{
-				// explicitly memset 0 stuff
-				overlapped->EventHandle = IntPtr.Zero;
-				overlapped->InternalHigh = IntPtr.Zero;
-				overlapped->InternalLow = IntPtr.Zero;
-
-				// set the high bits of ulong
-				overlapped->OffsetHigh = (int)((fileOffset & 0b11111111_11111111_11111111_11111111_0000000_0000000_0000000_0000000) >> 32);
-
-				// set the low bits
-				// NativeOverlapped's 'OffsetLow' is really just 'Offset'
-				overlapped->OffsetLow = (int)(fileOffset & 0b0000000_0000000_0000000_0000000_11111111_11111111_11111111_11111111);
-
-				fixed (byte* bufferPtr = buffer)
-				{
-					if (!Native.ReadFile(handle, bufferPtr, (uint)buffer.Length, out var bytesRead, (IntPtr)overlapped))
-					{
-						int errorCode = Marshal.GetLastWin32Error();
-
-						return new PResult
-						{
-							DidSucceed = false,
-							WindowsErrorCode = errorCode,
-						};
-					}
-					else
-					{
-						return new PResult
-						{
-							DidSucceed = true,
-							Bytes = bytesRead,
-						};
-					}
-				}
-			}
-			finally
-			{
-				Marshal.FreeHGlobal((IntPtr)overlapped);
+				var success = Native.ReadFile(handle, bufferPtr, (uint)buffer.Length, out var bytesRead, overlapped);
+				return PResultFromSuccess(success, bytesRead);
 			}
 		}
 
@@ -173,49 +141,69 @@ namespace pread.Implementations
 			var handle = fileStream.SafeFileHandle.DangerousGetHandle();
 
 			// https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-overlapped
-			// we can use System.Threading.NativeOverlapped
-			NativeOverlapped* overlapped = (NativeOverlapped*)Marshal.AllocHGlobal(sizeof(NativeOverlapped));
+			using var overlapped = MarshalAlloc<NativeOverlapped>.New();
 
 			// we're allocating memory, want to make sure we free it when we're done
-			try
+			SetOverlapped(overlapped, fileOffset);
+
+			fixed (byte* bufferPtr = data)
 			{
-				// explicitly memset 0 stuff
-				overlapped->EventHandle = IntPtr.Zero;
-				overlapped->InternalHigh = IntPtr.Zero;
-				overlapped->InternalLow = IntPtr.Zero;
-
-				// set the high bits of ulong
-				overlapped->OffsetHigh = (int)((fileOffset & 0b11111111_11111111_11111111_11111111_0000000_0000000_0000000_0000000) >> 32);
-
-				// set the low bits
-				// NativeOverlapped's 'OffsetLow' is really just 'Offset'
-				overlapped->OffsetLow = (int)(fileOffset & 0b0000000_0000000_0000000_0000000_11111111_11111111_11111111_11111111);
-
-				fixed (byte* bufferPtr = data)
-				{
-					if (!Native.WriteFile(handle, bufferPtr, (uint)data.Length, out var bytesWritten, (IntPtr)overlapped))
-					{
-						int errorCode = Marshal.GetLastWin32Error();
-
-						return new PResult
-						{
-							DidSucceed = false,
-							WindowsErrorCode = errorCode,
-						};
-					}
-					else
-					{
-						return new PResult
-						{
-							DidSucceed = true,
-							Bytes = bytesWritten,
-						};
-					}
-				}
+				var success = Native.WriteFile(handle, bufferPtr, (uint)data.Length, out var bytesWritten, overlapped);
+				return PResultFromSuccess(success, bytesWritten);
 			}
-			finally
+		}
+
+		// used to cleanly alloc/free marshal data
+		private unsafe ref struct MarshalAlloc<T> where T : unmanaged
+		{
+			public T* Data;
+
+			public static MarshalAlloc<T> New() => new MarshalAlloc<T>
 			{
-				Marshal.FreeHGlobal((IntPtr)overlapped);
+				Data = (T*)Marshal.AllocHGlobal(sizeof(T))
+			};
+
+			public void Dispose() => Marshal.FreeHGlobal((IntPtr)Data);
+
+			public static implicit operator T*(MarshalAlloc<T> marshalAlloc) => marshalAlloc.Data;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static unsafe void SetOverlapped(NativeOverlapped* overlapped, ulong fileOffset)
+		{
+			// explicitly memset 0 stuff
+			overlapped->EventHandle = IntPtr.Zero;
+			overlapped->InternalHigh = IntPtr.Zero;
+			overlapped->InternalLow = IntPtr.Zero;
+
+			// set the high bits of ulong
+			overlapped->OffsetHigh = (int)((fileOffset & 0b11111111_11111111_11111111_11111111_0000000_0000000_0000000_0000000) >> 32);
+
+			// set the low bits
+			// NativeOverlapped's 'OffsetLow' is really just 'Offset'
+			overlapped->OffsetLow = (int)(fileOffset & 0b0000000_0000000_0000000_0000000_11111111_11111111_11111111_11111111);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static PResult PResultFromSuccess(bool success, uint bytes)
+		{
+			if (!success)
+			{
+				var errorCode = Marshal.GetLastWin32Error();
+
+				return new PResult
+				{
+					DidSucceed = false,
+					WindowsErrorCode = errorCode,
+				};
+			}
+			else
+			{
+				return new PResult
+				{
+					DidSucceed = true,
+					Bytes = bytes,
+				};
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace pread.Implementations
@@ -85,6 +86,7 @@ namespace pread.Implementations
 
 		// API compatibility
 		[Obsolete("Use " + nameof(PRead) + ".")]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PResult Pread(Span<byte> buffer, FileStream fileStream, ulong fileOffset)
 			=> PRead(fileStream, buffer, fileOffset);
 
@@ -97,6 +99,7 @@ namespace pread.Implementations
 		/// <returns>A <see cref="PResult"/>.</returns>
 		// Pread -> PRead: inline with P.Read better, aligns with C# naming conventions better
 		// Span<byte>, FileStream, ulong -> FileStream, Span<byte>, ulong: aligns with P.Read better.
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static unsafe PResult PRead(FileStream fileStream, Span<byte> buffer, ulong fileOffset)
 		{
 			var fileDescriptor = fileStream.SafeFileHandle.DangerousGetHandle();
@@ -104,29 +107,12 @@ namespace pread.Implementations
 			fixed (void* bufferPtr = buffer)
 			{
 				var bytesRead = (long)Native.pread(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
-
-				if (bytesRead < 0)
-				{
-					var errno = Marshal.GetLastWin32Error();
-
-					return new PResult
-					{
-						DidSucceed = false,
-						Errno = errno,
-					};
-				}
-				else
-				{
-					return new PResult
-					{
-						DidSucceed = true,
-						Bytes = bytesRead,
-					};
-				}
+				return PResultFromBytes(bytesRead);
 			}
 		}
 
 		[Obsolete("Use " + nameof(PWrite) + ".")]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PResult Pwrite(ReadOnlySpan<byte> buffer, FileStream fileStream, ulong fileOffset)
 			=> PWrite(fileStream, buffer, fileOffset);
 
@@ -140,32 +126,38 @@ namespace pread.Implementations
 		// Pwrite -> PWrite: inline with P.Write better, aligns with C# naming conventions better
 		// ReadOnlySpan<byte>, FileStream, ulong -> FileStream, ReadOnlySpan<byte>, ulong: aligns with P.Write better.
 		// buffer -> data: better name, aligns with Windows.PWrite, was typo.
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static unsafe PResult PWrite(FileStream fileStream, ReadOnlySpan<byte> data, ulong fileOffset)
 		{
 			var fileDescriptor = fileStream.SafeFileHandle.DangerousGetHandle();
 
 			fixed (void* bufferPtr = data)
 			{
-				var bytesRead = (long)Native.pwrite(fileDescriptor, bufferPtr, (UIntPtr)data.Length, (IntPtr)fileOffset);
+				var bytesWritten = (long)Native.pwrite(fileDescriptor, bufferPtr, (UIntPtr)data.Length, (IntPtr)fileOffset);
+				return PResultFromBytes(bytesWritten);
+			}
+		}
 
-				if (bytesRead < 0)
-				{
-					var errno = Marshal.GetLastWin32Error();
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static PResult PResultFromBytes(long bytes)
+		{
+			if (bytes < 0)
+			{
+				var errno = Marshal.GetLastWin32Error();
 
-					return new PResult
-					{
-						DidSucceed = false,
-						Errno = errno,
-					};
-				}
-				else
+				return new PResult
 				{
-					return new PResult
-					{
-						DidSucceed = true,
-						Bytes = bytesRead,
-					};
-				}
+					DidSucceed = false,
+					Errno = errno,
+				};
+			}
+			else
+			{
+				return new PResult
+				{
+					DidSucceed = true,
+					Bytes = bytes,
+				};
 			}
 		}
 	}
