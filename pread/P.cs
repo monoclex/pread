@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace pread
 {
@@ -11,8 +12,8 @@ namespace pread
 	/// </summary>
 	public static class P
 	{
-		private static readonly bool _windows = Environment.OSVersion.Platform == PlatformID.Win32NT;
-		private static readonly bool _linux = Environment.OSVersion.Platform == PlatformID.Unix;
+		private static readonly bool _windows = Windows.MachineIsWindows;
+		private static readonly bool _linux = Unix.MachineIsUnix;
 
 		/// <summary>
 		/// Returns true if atmoic seek and read/write operations are supported.

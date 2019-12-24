@@ -10,6 +10,8 @@ namespace pread.Implementations
 	/// </summary>
 	public static class Windows
 	{
+		public static bool MachineIsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
 		// i dislike it but oh well :/
 		public static string StringError(int errorCode) => new System.ComponentModel.Win32Exception(errorCode).Message;
 

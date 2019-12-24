@@ -9,6 +9,11 @@ namespace pread.Implementations
 	/// </summary>
 	public static class Unix
 	{
+		public static bool MachineIsUnix { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+
+			// 90% sure OSX supports pread, will need tests later
+			|| RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+
 		// figured out thanks to help of members of the c# discord server in lowlevel-advanced,
 		// https://discord.gg/csharp
 

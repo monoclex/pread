@@ -11,14 +11,12 @@ namespace pread.Tests
 			[Fact]
 			public void When_StringErrorPassed2_Returns_ENOENT()
 			{
-				if (Environment.OSVersion.Platform != PlatformID.Unix)
+				if (Implementations.Unix.MachineIsUnix)
 				{
-					return;
+					// http://man7.org/linux/man-pages/man3/errno.3.html
+					var error = pread.Implementations.Unix.StringError(2);
+					Assert.Equal("No such file or directory", error);
 				}
-
-				// http://man7.org/linux/man-pages/man3/errno.3.html
-				var error = pread.Implementations.Unix.StringError(2);
-				Assert.Equal("No such file or directory", error);
 			}
 		}
 	}
