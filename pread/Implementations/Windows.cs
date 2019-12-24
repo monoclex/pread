@@ -13,26 +13,29 @@ namespace pread.Implementations
 		// i dislike it but oh well :/
 		public static string StringError(int errorCode) => new System.ComponentModel.Win32Exception(errorCode).Message;
 
+		public static class Native
+		{
 #pragma warning disable CA1401 // P/Invokes should not be visible - allow consumers to consume this if they choose to do so
 
-		// extern call signature: https://stackoverflow.com/a/28781279
-		// it is said that LPVOID and LPCVOID should be IntPtrs but i like byte* better
+			// extern call signature: https://stackoverflow.com/a/28781279
+			// it is said that LPVOID and LPCVOID should be IntPtrs but i like byte* better
 
-		/// <summary>
-		/// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile?redirectedfrom=MSDN
-		/// </summary>
-		[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		public static extern unsafe bool ReadFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
+			/// <summary>
+			/// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile?redirectedfrom=MSDN
+			/// </summary>
+			[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern unsafe bool ReadFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
 
-		/// <summary>
-		/// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
-		/// </summary>
-		[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		public static extern unsafe bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+			/// <summary>
+			/// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
+			/// </summary>
+			[DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi, SetLastError = true)]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern unsafe bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
 
 #pragma warning restore CA1401 // P/Invokes should not be visible
+		}
 
 		/// <summary>
 		/// Small utility struct for returning if a given pread was successful.
@@ -82,7 +85,7 @@ namespace pread.Implementations
 
 				fixed (byte* bufferPtr = buffer)
 				{
-					if (!ReadFile(handle, bufferPtr, (uint)buffer.Length, out var bytesRead, (IntPtr)overlapped))
+					if (!Native.ReadFile(handle, bufferPtr, (uint)buffer.Length, out var bytesRead, (IntPtr)overlapped))
 					{
 						int errorCode = Marshal.GetLastWin32Error();
 
@@ -140,7 +143,7 @@ namespace pread.Implementations
 
 				fixed (byte* bufferPtr = data)
 				{
-					if (!WriteFile(handle, bufferPtr, (uint)data.Length, out var bytesWritten, (IntPtr)overlapped))
+					if (!Native.WriteFile(handle, bufferPtr, (uint)data.Length, out var bytesWritten, (IntPtr)overlapped))
 					{
 						int errorCode = Marshal.GetLastWin32Error();
 

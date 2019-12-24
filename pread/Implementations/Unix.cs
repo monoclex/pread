@@ -12,34 +12,18 @@ namespace pread.Implementations
 		// figured out thanks to help of members of the c# discord server in lowlevel-advanced,
 		// https://discord.gg/csharp
 
-		// to get the string of an error, we call strerr (simple) and then free the char* afterwords
-		[DllImport("c")]
-		public static extern unsafe IntPtr strerror(IntPtr errnum);
+		// this returns the appropriate error messages on unix as well, despite being named win32
+		public static string StringError(int errorCode) => new System.ComponentModel.Win32Exception(errorCode).Message;
 
-		// [DllImport("c")]
-		// public static extern unsafe void free(IntPtr ptr);
-
-		public static string StringError(int errorCode)
+		public static class Native
 		{
-			var result = strerror((IntPtr)errorCode);
+			// TODO: C# 9, nuint instead of UIntPtr
+			[DllImport("c", SetLastError = true)]
+			public static extern unsafe IntPtr pread(IntPtr fd, void* buf, UIntPtr count, IntPtr offset);
 
-			try
-			{
-				return Marshal.PtrToStringAnsi(result);
-			}
-			finally
-			{
-				// calling 'free' causes the runtime to crash
-				// free(result);
-			}
+			[DllImport("c", SetLastError = true)]
+			public static extern unsafe IntPtr pwrite(IntPtr fd, void* buf, UIntPtr count, IntPtr offset);
 		}
-
-		// TODO: C# 9, nuint instead of UIntPtr
-		[DllImport("c", SetLastError = true)]
-		public static extern unsafe IntPtr pread(IntPtr fd, void* buf, UIntPtr count, IntPtr offset);
-
-		[DllImport("c", SetLastError = true)]
-		public static extern unsafe IntPtr pwrite(IntPtr fd, void* buf, UIntPtr count, IntPtr offset);
 
 		[StructLayout(LayoutKind.Auto)]
 		public struct PResult
@@ -64,7 +48,7 @@ namespace pread.Implementations
 
 			fixed (void* bufferPtr = buffer)
 			{
-				var bytesRead = (long)pread(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
+				var bytesRead = (long)Native.pread(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
 
 				if (bytesRead < 0)
 				{
@@ -99,7 +83,7 @@ namespace pread.Implementations
 
 			fixed (void* bufferPtr = buffer)
 			{
-				var bytesRead = (long)pwrite(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
+				var bytesRead = (long)Native.pwrite(fileDescriptor, bufferPtr, (UIntPtr)buffer.Length, (IntPtr)fileOffset);
 
 				if (bytesRead < 0)
 				{
