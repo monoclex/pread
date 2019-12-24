@@ -56,14 +56,20 @@ namespace pread
 			}
 		}
 
-		public override int Read(Span<byte> buffer)
+#if !NO_SPAN_OVERRIDES
+		override
+#endif
+		public int Read(Span<byte> buffer)
 		{
 			var result = _fileStreamSection.Read(buffer, _position);
 			_position += result;
 			return (int)result;
 		}
 
-		public override void Write(ReadOnlySpan<byte> buffer)
+#if !NO_SPAN_OVERRIDES
+		override
+#endif
+		public void Write(ReadOnlySpan<byte> buffer)
 		{
 			var bytesWritten = _fileStreamSection.Write(buffer, _position);
 			_position += bytesWritten;
