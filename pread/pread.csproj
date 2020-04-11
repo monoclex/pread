@@ -2,22 +2,22 @@
 
   <PropertyGroup>
     <TargetFrameworks>net45;netstandard1.3;netstandard2.1</TargetFrameworks>
-	<LangVersion>8.0</LangVersion>
+    <LangVersion>8.0</LangVersion>
     <Authors>SirJosh3917</Authors>
     <Description>Perform atomic seek and read/write operations in C#. Named after "pread", a POSIX function for atomically seeking and reading.</Description>
     <Copyright>2019</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/SirJosh3917/pread</PackageProjectUrl>
     <PackageTags>IO, Stream, atomic, pread, pwrite</PackageTags>
-    <PackageReleaseNotes>- Added compatibility for .NET FX 4.5 &amp; .NET Standard 1.3
-- Cleanup in Implementations.Unix/Windows</PackageReleaseNotes>
+    <PackageReleaseNotes>- Fix documentation not existing in released nuget package.</PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	<Version>1.0.1</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>1.0.2</Version>
+    <DocumentationFile>pread.xml</DocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net45' Or '$(TargetFramework)' == 'netstandard1.3'">
-	<DefineConstants>NO_SPAN_OVERRIDES;</DefineConstants>
+    <DefineConstants>NO_SPAN_OVERRIDES;</DefineConstants>
   </PropertyGroup>
 
   <!-- System.Memory for Span compatibility with older versions -->
