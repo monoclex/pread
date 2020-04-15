@@ -8,28 +8,30 @@ Perform atomic seek and read/write operations in C#. Named after "pread", a POSI
 | [![Build status](https://dev.azure.com/SirJosh3917/pread/_apis/build/status/pipelines-win.yml/windows-tests)](https://dev.azure.com/SirJosh3917/pread/_build/latest?definitionId=4) | [![Build status](https://dev.azure.com/SirJosh3917/pread/_apis/build/status/devops.yml/linux-tests)](https://dev.azure.com/SirJosh3917/pread/_build/latest?definitionId=3) |
 
 ## Install pread
-[![Nuget](https://img.shields.io/nuget/v/pread?style=flat-square)](https://www.nuget.org/packages/pread)
+[![Nuget Version](https://img.shields.io/nuget/v/pread?style=flat-square)](https://www.nuget.org/packages/pread) [![Nuget Downloads](https://img.shields.io/nuget/dt/pread?style=flat-square)](https://www.nuget.org/packages/pread)
 ```
 Install-Package pread
 ```
 
 # About
 
-Streams in C# do not support atomic seek and read operations, meaning you can't read data at an arbitrary position in a file without some kind of locking mechanisms. At the OS level, this is a supported operation - on unix, there's [pread](http://man7.org/linux/man-pages/man2/pwrite.2.html), and on Windows you simply need to pass in the correct data to `Offset` and `OffsetHigh` to an [OVERLAPPED](https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-overlapped) when calling [ReadFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile). If that sounds like a bunch of mumbo jumbo to you, that's because it is. It's a shame that C# does not support an atomic seek and read/write operation - even [Java does!](https://docs.oracle.com/javase/7/docs/api/java/nio/channels/FileChannel.html#read(java.nio.ByteBuffer,%20long))
+Streams in C# do not support atomic seek and read operations, meaning you can't read data at an arbitrary position in a file without some kind of locking mechanisms. At the OS level, this is a supported operation - on linux, there's [pread](http://man7.org/linux/man-pages/man2/pwrite.2.html), and on Windows you simply need to pass in the correct data to `Offset` and `OffsetHigh` to an [OVERLAPPED](https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-overlapped) when calling [ReadFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile). If that sounds like a bunch of mumbo jumbo to you, that's because it is. It's a shame that C# does not support an atomic seek and read/write operation - even [Java does!](https://docs.oracle.com/javase/7/docs/api/java/nio/channels/FileChannel.html#read(java.nio.ByteBuffer,%20long))
 
-Enter `pread`. `pread` exposes a simple api, `P.Read(FileStream, Span<byte>, ulong)` and `P.Read(FileStream, ReadOnlySpan<byte>, ulong)` which wrap around the native unix methods [pread and pwrite](http://man7.org/linux/man-pages/man2/pwrite.2.html) on linux and wraps around [ReadFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile) and [WriteFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile) on windows.
+Enter pread. pread exposes a simple api, `P.Read(FileStream, Span<byte>, ulong)` and `P.Read(FileStream, ReadOnlySpan<byte>, ulong)` which wrap around the native linux methods [pread and pwrite](http://man7.org/linux/man-pages/man2/pwrite.2.html) on linux and wraps around [ReadFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile) and [WriteFile](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile) on windows.
 
 # Performance
 
-Comparison between using `P.Read` versus `Stream.Seek`ing to a position, calling `Stream.Read`, then `Stream.Seek`ing back to the origin.
+Shown below is a comparison (on my computer) between using `P.Read` versus `Stream.Seek`ing to a position, calling `Stream.Read`, then `Stream.Seek`ing back to the origin.
 
-It should be noted that even if the seek call back to the origin is elided, it only saves about 0.2ns
+It should be noted that even if the seek call back to the origin is elided, it only saves about 0.2us
 
+With seeking back to origin:
 |            Method |     Mean |     Error |    StdDev |
 |------------------ |---------:|----------:|----------:|
 |             Pread | 1.984 us | 0.0264 us | 0.0234 us |
 | StreamReadAndSeek | 2.253 us | 0.0291 us | 0.0272 us |
 
+Without seeking back to origin:
 |            Method |       Mean |    Error |   StdDev |
 |------------------ |-----------:|---------:|---------:|
 |             Pread |   896.1 ns | 16.20 ns | 15.15 ns |
@@ -38,6 +40,20 @@ It should be noted that even if the seek call back to the origin is elided, it o
 # Usage
 
 The main API for this library is `P.Read` and `P.Write`. However, there are various abstractions built on top of these methods that are recommended to be used instead due to the increase safety they provide.
+
+```cs
+uint P.Read(FileStream fileStream, Span<byte> buffer, ulong fileOffset);
+uint P.Write(FileStream fileStream, ReadOnlySpan<byte> data, ulong fileOffset);
+
+// example
+
+using var fileStream = new FileStream("my_file.txt", FileMode.OpenOrCreate);
+var buffer = new byte[4096];
+
+var bytesRead = P.Read(fileStream, buffer, fileOffset: 0);
+
+var bytesWritten = P.Write(fileStream, buffer, fileOffset: 123456);
+```
 
 ### FileStreamSection
 
